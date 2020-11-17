@@ -1,0 +1,50 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+{% include 'albums/snippets/modal.html' %}
+
+<div class="row mt-2">
+    <div class="col-6">
+        <h2>Galería</h2>
+    </div>
+
+    <div class="col-6 text-right">
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#newAlbum">
+            Nuevo Álbum
+        </button>
+    </div>
+</div>
+
+
+<div class="row mt-2">
+    <div class="col">
+        
+        <table class="table">
+            <thead class="thead-dark">
+              <tr>
+                <th scope="col">Título</th>
+                <th scope="col">Fecha creación</th>
+                <th scope="col">Items</th>
+                <th scope="col">Size</th>
+              </tr>
+            </thead>
+            <tbody>
+                {% for album in object_list %}
+                    <tr>    
+                        <td>
+                            <i class="fas fa-folder"></i>
+                            <a href="{% url 'albums:detail' album.id %}">
+                                {{ album.title }}
+                            </a>
+                        </td>
+                        <td>{{ album.created_at | date:'d M Y' }}</td>
+                        <td> {{ album.images.count }}</td>
+                        <td>{{ album.size }} Kb</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+          </table>
+    </div>
+</div>
+
+{% endblock %}

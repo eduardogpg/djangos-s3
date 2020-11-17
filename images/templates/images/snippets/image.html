@@ -1,0 +1,35 @@
+<tr class="row-image" image-id="{{ image.id }}" id="image-{{ image.id }}">
+    <td>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input check-images" image-id="{{ image.id }}">
+        </div>
+    </td>
+    <td>
+        <input type="hidden" value="{{ image.url }}" id="image-preview-{{ image.id }}">
+        <div id="image-name-{{ image.id }}">
+            {{ image.title }}
+        </div>
+        
+        <form action="{% url 'images:update' image.pk %}" method="POST" class="image-form" image-id="{{ image.id }}">
+            {% csrf_token %}
+            <input type="hidden" value="{{ image.title }}" class="form-control" id="image-input-name-{{ image.id }}" name="name">
+        </form>
+    </td>
+    <td>{{ image.created_at }}</td>
+    <td>{{ image.size }} </td>
+    <td>
+        <div class="btn-group">
+            <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown">
+                ...
+            </button>
+            <div class="dropdown-menu">
+                <a href="{{ image.url }}" target="_blank" class="dropdown-item">Vista previa</a>
+                <a href="" class="dropdown-item image-edit" image-id="{{ image.id }}">Editar nombre</a>
+                <a href="{% url 'images:download' image.id %}" class="dropdown-item">Descargar</a>
+
+                <div class="dropdown-divider"></div>
+                <a href="{% url 'images:show' image.id %}" class="dropdown-item" data-toggle="modal" data-target="#deleteModal">Eliminar</a>
+            </div>
+        </div>
+    </td>
+</tr>

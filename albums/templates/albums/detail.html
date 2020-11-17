@@ -1,0 +1,276 @@
+{% extends 'base/base.html' %}
+
+{% block style %}
+<style>
+    .row-image {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include 'images/snippets/modal.html' %}
+{% include 'images/snippets/delete.html' %}
+
+<div class="row mt-2">
+    <div class="col">
+        <h4><a href="{% url 'albums:list' %}">Galería/</a>{{ object }}</h4>
+    </div>
+</div>
+
+<div class="row mt-2">
+    <div class="col">
+        <form action="{% url 'images:search' %}" id="image-search">
+            <input type="text" class="form-control" name="q" placeholder="Escriba un prefijo">
+        </form>
+    </div>
+</div>
+
+<hr>
+
+<div class="row">
+    <div class="col">
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#newImage">
+            Nueva Imagen
+        </button>
+
+        <a href="{% url 'images:download_many' %}" class="btn btn-info disabled" id="download-images">
+            Descargar
+        </a>
+
+        <a href="{% url 'images:delete_many' %}" class="btn btn-danger disabled" id="delete-images" >
+            Eliminar
+        </a>
+
+    </div>
+</div>
+
+<div class="row mt-2">
+    <div class="col-8">
+        <table class="table">
+            <thead>
+                <tr>
+                    <td>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="check-all-images">
+                        </div>
+                    </td>
+                    <th>Nombre</th>
+                    <th>Fecha Creación</th>
+                    <th>Size</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="table-images">
+                {% for image in images %}
+                    {% include 'images/snippets/image.html' %}
+                {% endfor%}
+            </tbody>
+        </table>
+
+    </div>
+    <div class="col-4">
+        <img src="" alt="" width="300" height="300" id="image-preview">
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+    const imagePreview = document.getElementById('image-preview');
+    const imageDefault = "https://cfimagesproject.s3.us-east-2.amazonaws.com/codigofacilito.png";
+
+    const checkAllImages = document.getElementById('check-all-images');
+
+    const downloadImages = document.getElementById('download-images');
+    const deleteImages = document.getElementById('delete-images');
+
+    const imageSearch = document.getElementById('image-search');
+
+    function checkInputs(){
+        var images = document.querySelectorAll('input.check-images[type="checkbox"]:checked');
+
+        if(images.length >= 2){
+            downloadImages.classList.remove('disabled');
+            deleteImages.classList.remove('disabled');
+        } else {
+            downloadImages.classList.add('disabled');
+            deleteImages.classList.add('disabled');
+        }
+    }
+
+    function selectRow(row){
+
+        var imageId = row.getAttribute('image-id');
+        var input = document.getElementById('image-preview-' + imageId);
+
+        imagePreview.src = input.value;
+
+        document.querySelectorAll('.table-active').forEach(element => {
+            element.classList.remove('table-active')
+        })
+
+        row.classList.add('table-active');
+        
+    }
+
+    function setDefaultImage(){
+        var rows = document.getElementsByTagName('tr');
+
+        if(rows.length >= 2 ){
+            selectRow(rows[1]);
+        } else {
+            imagePreview.src = imageDefault;
+        }
+    }
+
+    function getImagesSelected(){
+        var ids = [];
+        var images = document.querySelectorAll('input.check-images[type="checkbox"]:checked');
+
+        for(var i = 0; i < images.length; i ++){
+            var imageId = images[i].getAttribute('image-id');
+            ids.push(imageId);
+        }
+
+        return ids
+    }
+
+    function registerEvents(){
+
+        document.querySelectorAll('.row-image').forEach(element => {
+            element.addEventListener('click', function(event){
+                selectRow(this);
+            })
+        })
+
+        document.querySelectorAll('.image-edit').forEach(element => {
+            element.addEventListener('click', function(event){
+                event.preventDefault();
+
+                var imageId = this.getAttribute('image-id');
+                var input = document.getElementById('image-input-name-' + imageId);
+
+                var div = document.getElementById('image-name-' + imageId);
+
+                div.style.display = 'none';
+                input.setAttribute('type', 'text');
+                
+            });
+        })
+
+        document.querySelectorAll('.image-form').forEach(element => {
+            element.addEventListener('submit', function(event){
+                event.preventDefault();
+
+                fetch(this.action, {
+                    body: new FormData(this),
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+
+                    var imageId = this.getAttribute('image-id');
+                    
+                    var input = document.getElementById('image-input-name-' + imageId);
+                    input.value = data.name;
+                    input.setAttribute('type', 'hidden');
+
+                    var div = document.getElementById('image-name-' + imageId);
+                    div.innerHTML = data.name;
+                    div.style.display = 'block';
+
+                    var preview = document.getElementById('image-preview-' + imageId);
+                    preview.value = data.url;
+
+                });
+            })
+        })
+
+        document.querySelectorAll('.check-images').forEach(element => {
+            element.addEventListener('change', function(event){
+                checkInputs();
+            })
+        })
+    
+    }
+
+    $('#deleteModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var item = button[0];
+        var modal = $(this);
+
+        fetch(item.href)
+        .then(response => response.json())
+        .then(function(data){
+            
+            modal.find('#strong-name').text(data.name);
+            modal.find('#delete-modal-button')[0].href = data.delete_url;
+            
+        });
+       
+    })
+
+    checkAllImages.addEventListener('change', function(event){
+        document.querySelectorAll('.check-images').forEach(element => {
+            element.checked = this.checked;
+        });
+
+        checkInputs();
+    });
+
+    deleteImages.addEventListener('click', function(event){
+        event.preventDefault();
+        
+        var ids = getImagesSelected();
+
+        fetch(this.href, {
+            method: 'POST',
+            body: JSON.stringify({'ids': ids})
+        })
+        .then(response => response.json())
+        .then(function(data){
+
+            for(var i = 0; i < data.ids.length; i ++ ){
+                var imageId = data.ids[i];
+                document.getElementById("image-" + imageId).remove();
+            }
+
+            setDefaultImage();
+
+        });
+
+    });
+
+    downloadImages.addEventListener('click', function(event){
+        event.preventDefault();
+
+        var ids = getImagesSelected();
+
+        window.location.href = this.href + '?ids=' + ids;
+
+    });
+
+    imageSearch.addEventListener('submit', function(event){
+        event.preventDefault();
+
+        fetch(this.action + '?q=' + this.q.value)
+        .then(response => response.json())
+        .then(data => {
+
+            var table = document.getElementById('table-images');
+            table.innerHTML = data.images.toString().replaceAll(',', '');
+
+            registerEvents();
+            setDefaultImage();
+
+        });
+
+    });
+
+    registerEvents();
+    setDefaultImage();
+
+</script>
+{% endblock %}
